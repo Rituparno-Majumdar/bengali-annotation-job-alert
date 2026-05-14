@@ -1,8 +1,24 @@
+import html
 import os
 import requests
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+
+def url_safe(url: str) -> str:
+    return url.replace('&', '&amp;') if url else '#'
+
+
+def is_valid_url(url: str) -> bool:
+    if not url:
+        return False
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
+    except Exception:
+        return False
 
 class TelegramNotifier:
     def __init__(self, bot_token=None, chat_id=None):
@@ -23,11 +39,17 @@ class TelegramNotifier:
             logger.error("Cannot send alert: Telegram credentials missing.")
             return False
 
+        raw_url = job.get('url', '')
+        if is_valid_url(raw_url):
+            apply_button = f'<a href="{url_safe(raw_url)}">Apply Here</a>'
+        else:
+            apply_button = "⚠️ Link unavailable — search the title on the source site."
+
         message = (
-            f"🚨 <b>New Job Alert: {job.get('source', 'Web')}</b>\n\n"
-            f"<b>Title:</b> {job.get('title')}\n"
-            f"<b>Company:</b> {job.get('company', 'Unknown')}\n\n"
-            f"<a href='{job.get('url')}'>Apply Here</a>"
+            f"🚨 <b>New Job Alert: {html.escape(job.get('source', 'Web'))}</b>\n\n"
+            f"<b>Title:</b> {html.escape(job.get('title') or 'N/A')}\n"
+            f"<b>Company:</b> {html.escape(job.get('company', 'Unknown'))}\n\n"
+            f"{apply_button}"
         )
 
         payload = {
