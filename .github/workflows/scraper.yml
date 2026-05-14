@@ -2,8 +2,8 @@ name: Job Tracker Scraper
 
 on:
   schedule:
-    # Run every 6 hours starting at 6:00 AM IST (00:30, 06:30, 12:30, 18:30 UTC)
-    - cron: '30 */6 * * *'
+    # Run every 6 hours at an off-minute to bypass GitHub Actions server congestion (00:17, 06:17, 12:17, 18:17 UTC)
+    - cron: '17 */6 * * *'
   workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
 
 jobs:
