@@ -110,6 +110,14 @@ class RemotiveScraper(BaseScraper):
         return jobs
 
 class LinkedInScraper(BaseScraper):
+    SEARCH_QUERIES = [
+        "bengali data annotation",
+        "bengali language specialist",
+        "bengali translator",
+        "bengali linguist",
+        "bengali ai training"
+    ]
+
     def __init__(self, keywords=None):
         super().__init__(keywords)
         self.headers = {
@@ -120,44 +128,52 @@ class LinkedInScraper(BaseScraper):
         
     def fetch_jobs(self):
         jobs = []
-        # Search LinkedIn's public jobs portal for remote positions
-        url = "https://www.linkedin.com/jobs/search?keywords=bengali%20data%20annotation&location=Remote"
-        
-        try:
-            response = requests.get(url, headers=self.headers, timeout=10)
-            # Random delay to avoid detection
-            time.sleep(random.uniform(2, 4))
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
+        seen_ids = set()
+
+        for keywords in self.SEARCH_QUERIES:
+            encoded_kw = quote_plus(keywords)
+            # Search LinkedIn's public jobs portal for remote positions
+            url = f"https://www.linkedin.com/jobs/search?keywords={encoded_kw}&location=Remote&f_TPR=r604800"
             
-            cards = soup.find_all('div', class_='base-card')
-            for card in cards:
-                title_elem = card.find('h3', class_='base-search-card__title')
-                company_elem = card.find('h4', class_='base-search-card__subtitle')
-                link_elem = card.find('a', class_='base-card__full-link')
+            try:
+                response = requests.get(url, headers=self.headers, timeout=10)
+                # Random delay to avoid detection
+                time.sleep(random.uniform(2, 4))
+                response.raise_for_status()
+                soup = BeautifulSoup(response.text, 'html.parser')
                 
-                if not title_elem:
-                    continue
+                cards = soup.find_all('div', class_='base-card')
+                for card in cards:
+                    title_elem = card.find('h3', class_='base-search-card__title')
+                    company_elem = card.find('h4', class_='base-search-card__subtitle')
+                    link_elem = card.find('a', class_='base-card__full-link')
                     
-                title = title_elem.text.strip()
-                company = company_elem.text.strip() if company_elem else "Unknown"
-                url = link_elem['href'].split('?')[0] if link_elem else "No link found" # Clean tracking params
-                
-                # Check keywords since LinkedIn's own search might return loosely related jobs
-                if self.matches_keywords(title):
-                    job_id = url.split('-')[-1] if '-' in url else url
-                    jobs.append({
-                        "id": job_id,
-                        "title": title,
-                        "company": company,
-                        "url": url,
-                        "source": "LinkedIn",
-                        "description": "View LinkedIn for full description."
-                    })
-            logger.info(f"Fetched {len(jobs)} matching jobs from LinkedIn")
-        except Exception as e:
-            logger.error(f"Error fetching from LinkedIn: {e}")
+                    if not title_elem:
+                        continue
+                        
+                    title = title_elem.text.strip()
+                    company = company_elem.text.strip() if company_elem else "Unknown"
+                    job_url = link_elem['href'].split('?')[0] if link_elem else "No link found"
+                    
+                    job_id = job_url.split('-')[-1] if '-' in job_url else job_url
+                    if job_id in seen_ids:
+                        continue
+                    seen_ids.add(job_id)
+
+                    # Check keywords since LinkedIn's own search might return loosely related jobs
+                    if self.matches_keywords(title):
+                        jobs.append({
+                            "id": job_id,
+                            "title": title,
+                            "company": company,
+                            "url": job_url,
+                            "source": "LinkedIn",
+                            "description": "View LinkedIn for full description."
+                        })
+            except Exception as e:
+                logger.error(f"Error fetching from LinkedIn for '{keywords}': {e}")
             
+        logger.info(f"Fetched {len(jobs)} total matching jobs from LinkedIn")
         return jobs
 
 def get_all_scrapers():
