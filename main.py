@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import time
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -63,8 +64,10 @@ def main():
                 if success:
                     save_seen_job(job_id, seen_jobs)
                     new_jobs_found += 1
+                    # Small delay to prevent Telegram rate limiting
+                    time.sleep(1)
                 else:
-                    logger.error(f"Failed to notify for job: {job_id}")
+                    logger.error(f"  ❌ Failed to notify for: {job_id}")
             else:
                 logger.debug(f"Job already seen: {job_id}")
                 
