@@ -1,3 +1,4 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 import logging
@@ -312,6 +313,71 @@ class LinkedInScraper(BaseScraper):
         return jobs
 
 
+_SERPAPI_QUERIES = [
+    "bengali annotation jobs",
+    "bangla linguist AI training",
+    "bengali NLP data labeling",
+    "indic language annotation remote",
+]
+
+
+class SerpApiScraper(BaseScraper):
+    """Searches Google Jobs via SerpAPI — covers all sources including companies with no ATS API."""
+
+    def __init__(self):
+        self.api_key = os.environ.get("SERPAPI_KEY")
+
+    def fetch_jobs(self):
+        if not self.api_key:
+            logger.warning("SerpAPI: SERPAPI_KEY not set, skipping.")
+            return []
+
+        jobs = []
+        seen_ids = set()
+
+        for query in _SERPAPI_QUERIES:
+            try:
+                resp = self._get(
+                    "https://serpapi.com/search.json",
+                    params={
+                        "engine": "google_jobs",
+                        "q": query,
+                        "hl": "en",
+                        "gl": "us",
+                        "chips": "date_posted:week",
+                        "api_key": self.api_key,
+                    },
+                )
+                for item in resp.json().get("jobs_results", []):
+                    title = item.get("title", "")
+                    desc = item.get("description", "") or ""
+                    if not self.matches_keywords(title, desc):
+                        continue
+
+                    job_id = f"serpapi:{item.get('job_id', '')}"
+                    if job_id in seen_ids:
+                        continue
+                    seen_ids.add(job_id)
+
+                    # Best available apply URL from related_links
+                    related = item.get("related_links", [])
+                    url = related[0].get("link", "") if related else ""
+
+                    jobs.append({
+                        "id": job_id,
+                        "title": title,
+                        "company": item.get("company_name", "Unknown"),
+                        "url": url,
+                        "source": f"Google Jobs ({item.get('via', 'web')})",
+                        "description": desc[:400],
+                    })
+            except Exception as e:
+                logger.error(f"SerpAPI error for query '{query}': {e}")
+
+        logger.info(f"SerpAPI: {len(jobs)} matching jobs")
+        return jobs
+
+
 def get_all_scrapers():
     return [
         # RSS
@@ -322,11 +388,15 @@ def get_all_scrapers():
         RemoteOKScraper(),
         ArbeitnowScraper(),
 
+        # Google Jobs aggregator — covers Outlier, Alignerr, Sigma AI, YPAI and all others
+        SerpApiScraper(),
+
         # Vendor Greenhouse boards — verified working slugs
         GreenhouseScraper("remotasks", "Remotasks (Telus Digital AI)"),
         GreenhouseScraper("scaleai", "Scale AI"),
 
         # Vendor Lever boards — verified working slugs
+        LeverScraper("rws", "RWS TrainAI"),
         LeverScraper("appen", "Appen"),
         LeverScraper("innodata", "Innodata"),
 
