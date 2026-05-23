@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-Automated job monitor for Bengali AI data annotation and NLP/LLM training roles. Scrapes LinkedIn, Remotive, and RSS feeds every 6 hours, deduplicates results, and delivers instant Telegram alerts for new postings.
+Automated job monitor for Bengali AI data annotation and NLP/LLM training roles. Monitors 11 sources — vendor ATS boards, job aggregators, and RSS feeds — every 6 hours, deduplicates results, and delivers instant Telegram alerts for new postings.
 
 ---
 
@@ -17,11 +17,16 @@ Bengali is a high-demand, low-resource language in NLP and LLM training pipeline
 ## How It Works
 
 ```
-LinkedIn (5 queries)  ──┐
-Remotive API           ──┼──► Scraper ──► Dedup (seen_jobs.json) ──► Telegram Alert
-RSS / Atom feeds       ──┘
+Vendor ATS boards      ──┐
+  (RWS, Appen, Scale,    │
+   Innodata, Remotasks)  │
+Indeed + Google Jobs   ──┼──► Scraper ──► Dedup (seen_jobs.json) ──► Telegram Alert
+General job APIs       ──┤
+  (Remotive, RemoteOK,   │
+   Arbeitnow, WWR RSS)   │
+LinkedIn (best-effort) ──┘
           ▲
-    GitHub Actions (every 6h)
+    GitHub Actions (every 6h) + Telegram heartbeat after each run
 ```
 
 ---
@@ -31,8 +36,8 @@ RSS / Atom feeds       ──┘
 | Component | Technology |
 |---|---|
 | Language | Python 3.11 |
-| Scraping | BeautifulSoup4, Requests, lxml |
-| Job sources | LinkedIn (web), Remotive (API), RSS/Atom |
+| Scraping | BeautifulSoup4, Requests, lxml, python-jobspy |
+| Job sources | Greenhouse API, Lever API, Indeed, Google Jobs, Remotive, RemoteOK, Arbeitnow, WeWorkRemotely RSS, LinkedIn |
 | Notifications | Telegram Bot API |
 | Automation | GitHub Actions (cron: every 6 hours) |
 | State tracking | `seen_jobs.json` (committed, auto-updated by CI) |
@@ -41,9 +46,24 @@ RSS / Atom feeds       ──┘
 
 ## Sources Monitored
 
-- **LinkedIn** — 5 search queries: `bengali data annotation`, `bengali linguist`, `bengali NLP`, `bengali language expert`, `bengali AI trainer`
-- **Remotive** — API query for `bengali` across remote tech roles
-- **RSS/Atom feeds** — Configurable feed list for job boards
+**Vendor ATS boards** (highest signal — direct from annotation companies):
+- **RWS TrainAI** (Lever) — AI data specialist and linguistic auditor roles
+- **Appen** (Lever) — language data collection and annotation gigs
+- **Scale AI** (Greenhouse) — data labeling and AI training roles
+- **Innodata** (Lever) — NLP and data annotation positions
+- **Remotasks / Telus Digital AI** (Greenhouse) — AI training task roles
+
+**Job aggregators** (broad coverage, no API key required):
+- **Indeed + Google Jobs** (via python-jobspy) — aggregates from Outlier, Alignerr, Sigma AI, YPAI, and thousands of other sources; 4 search queries: `bengali annotation`, `bangla linguist AI training`, `bengali NLP data labeling`, `indic language annotation`
+- **Remotive** — remote tech job API; queries: `annotation`, `linguist`, `bengali`
+- **RemoteOK** — remote job API with tag-based filtering
+- **Arbeitnow** — European remote job board API
+
+**RSS feeds:**
+- **WeWorkRemotely** — "All Other Remote Jobs" category feed
+
+**Best-effort:**
+- **LinkedIn** — 5 search queries; may be blocked on CI runners, included as supplementary coverage
 
 ---
 
@@ -95,7 +115,7 @@ Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as repository secrets under **Se
 ```
 bengali-annotation-job-alert/
 ├── main.py               # Orchestrator: loads state, runs scrapers, dispatches alerts
-├── scraper.py            # LinkedIn, Remotive, and RSS scrapers with dedup logic
+├── scraper.py            # All scrapers: vendor ATS, job aggregators, RSS, LinkedIn
 ├── notifier.py           # Telegram Bot notifier
 ├── get_chat_id.py        # Utility to retrieve your Telegram chat ID
 ├── test_notification.py  # Smoke test for Telegram connection
