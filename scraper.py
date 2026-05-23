@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # --- Keyword matching ---
 
 _SPECIFIC_LANGUAGE = ["bengali", "bangla", "bn-in", "bn-bd"]
-_UMBRELLA_LANGUAGE = ["indic", "indian language", "south asian language", "multilingual annotation"]
+_UMBRELLA_LANGUAGE = ["indic", "indian language", "south asian language", "multilingual annotation", "low-resource", "native speaker"]
 _ROLE_TOKENS = [
     "annotat", "label", "linguist", "transcri",
     "ai train", "llm", "rlhf", "prompt", "language data", "translat",
@@ -84,6 +84,7 @@ class RSSScraper(BaseScraper):
                     })
         except Exception as e:
             logger.error(f"RSS error ({self.source_name}): {e}")
+            raise
         logger.info(f"RSS {self.source_name}: {len(jobs)} matching jobs")
         return jobs
 
@@ -117,6 +118,7 @@ class RemotiveScraper(BaseScraper):
                         })
         except Exception as e:
             logger.error(f"Remotive error: {e}")
+            raise
         logger.info(f"Remotive: {len(jobs)} matching jobs")
         return jobs
 
@@ -147,6 +149,7 @@ class RemoteOKScraper(BaseScraper):
                     })
         except Exception as e:
             logger.error(f"RemoteOK error: {e}")
+            raise
         logger.info(f"RemoteOK: {len(jobs)} matching jobs")
         return jobs
 
@@ -175,6 +178,7 @@ class ArbeitnowScraper(BaseScraper):
                     })
         except Exception as e:
             logger.error(f"Arbeitnow error: {e}")
+            raise
         logger.info(f"Arbeitnow: {len(jobs)} matching jobs")
         return jobs
 
@@ -210,8 +214,10 @@ class GreenhouseScraper(BaseScraper):
                 logger.warning(f"Greenhouse board not found: {self.board_token}")
             else:
                 logger.error(f"Greenhouse error ({self.company_name}): {e}")
+                raise
         except Exception as e:
             logger.error(f"Greenhouse error ({self.company_name}): {e}")
+            raise
         logger.info(f"Greenhouse/{self.company_name}: {len(jobs)} matching jobs")
         return jobs
 
@@ -245,8 +251,10 @@ class LeverScraper(BaseScraper):
                 logger.warning(f"Lever board not found: {self.company_slug}")
             else:
                 logger.error(f"Lever error ({self.company_name}): {e}")
+                raise
         except Exception as e:
             logger.error(f"Lever error ({self.company_name}): {e}")
+            raise
         logger.info(f"Lever/{self.company_name}: {len(jobs)} matching jobs")
         return jobs
 
@@ -364,7 +372,8 @@ class JobSpyScraper(BaseScraper):
 
 
 def get_all_scrapers():
-    return [
+    import os
+    scrapers = [
         # RSS
         RSSScraper("https://weworkremotely.com/categories/all-other-remote-jobs.rss", "WeWorkRemotely"),
 
@@ -384,7 +393,10 @@ def get_all_scrapers():
         LeverScraper("rws", "RWS TrainAI"),
         LeverScraper("appen", "Appen"),
         LeverScraper("innodata", "Innodata"),
-
-        # LinkedIn (best-effort; may be blocked on CI runners)
-        LinkedInScraper(),
     ]
+
+    # LinkedIn is best-effort locally; usually blocked on CI runners
+    if os.environ.get("ENABLE_LINKEDIN", "1") != "0":
+        scrapers.append(LinkedInScraper())
+
+    return scrapers

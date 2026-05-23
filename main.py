@@ -84,7 +84,8 @@ def main():
 
     logger.info(f"Finished. Total new alerts: {new_jobs_found}")
 
-    notifier.send_heartbeat(source_summary, new_jobs_found)
+    error_count = sum(1 for s in source_summary if s.endswith(": ERROR"))
+    notifier.send_heartbeat(source_summary, new_jobs_found, error_count, len(scrapers))
 
 
 if __name__ == "__main__":

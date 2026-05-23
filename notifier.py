@@ -71,14 +71,17 @@ class TelegramNotifier:
             logger.info(f"Alert sent: {job.get('title')}")
         return success
 
-    def send_heartbeat(self, source_summary: list, total_new: int) -> None:
+    def send_heartbeat(self, source_summary: list, total_new: int, error_count: int = 0, total_sources: int = 0) -> None:
         """Send a run summary so silence = a real problem."""
         if not self.bot_token or not self.chat_id:
             return
         lines = "\n".join(f"  • {s}" for s in source_summary)
+        healthy = total_sources - error_count
+        health_line = f"<b>Sources healthy:</b> {healthy}/{total_sources}\n\n" if total_sources else ""
         message = (
             f"✅ <b>Job Alert Run Complete</b>\n\n"
-            f"<b>New alerts sent:</b> {total_new}\n\n"
+            f"<b>New alerts sent:</b> {total_new}\n"
+            f"{health_line}"
             f"<b>Per source:</b>\n{lines}"
         )
         payload = {
@@ -87,5 +90,8 @@ class TelegramNotifier:
             "parse_mode": "HTML",
             "disable_web_page_preview": True,
         }
-        self._post(payload)
-        logger.info("Heartbeat sent.")
+        success = self._post(payload)
+        if success:
+            logger.info("Heartbeat sent.")
+        else:
+            logger.error("Heartbeat send failed.")
