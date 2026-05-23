@@ -1,39 +1,121 @@
-# Bengali Data Annotation Job Tracker
+# Bengali Annotation Job Alert
 
-An automated script that searches for Bengali data annotation jobs and sends real-time alerts to your Telegram.
+![Scraper](https://github.com/Rituparno-Majumdar/bengali-annotation-job-alert/actions/workflows/scraper.yml/badge.svg)
+![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-## Setup Instructions
+Automated job monitor for Bengali AI data annotation and NLP/LLM training roles. Scrapes LinkedIn, Remotive, and RSS feeds every 6 hours, deduplicates results, and delivers instant Telegram alerts for new postings.
 
-### 1. Get a Telegram Bot Token
-1. Open the Telegram app and search for `@BotFather`.
-2. Send the message `/newbot` to BotFather.
-3. Choose a name for your bot (e.g., `Bengali Job Tracker`).
-4. Choose a username for your bot (must end in `bot`, e.g., `BengaliTrackerBot`).
-5. BotFather will reply with a message containing your **Bot Token** (it looks like `123456789:ABCdefGHIjklMNOpqrSTUvwxYZ`). Copy this token.
+---
 
-### 2. Get Your Telegram Chat ID
-1. In Telegram, search for `@userinfobot` and start a chat with it.
-2. It will reply with your `Id` (e.g., `987654321`). Copy this ID.
-3. Start a chat with your newly created bot and send it a test message like "Hello". (This is required so the bot is allowed to message you).
+## Why This Exists
 
-### 3. Configure the Project
-1. In this directory (`/Users/pari/Documents/ANTIGRAVITY/jobsearch/dataannotation`), create a new file named `.env`.
-2. Add your credentials to the `.env` file like this:
+Bengali is a high-demand, low-resource language in NLP and LLM training pipelines. Relevant annotation roles appear infrequently and are scattered across multiple platforms. Manual checking is unreliable. This tool monitors all sources continuously and delivers alerts the moment a matching role is posted.
+
+---
+
+## How It Works
+
 ```
+LinkedIn (5 queries)  ──┐
+Remotive API           ──┼──► Scraper ──► Dedup (seen_jobs.json) ──► Telegram Alert
+RSS / Atom feeds       ──┘
+          ▲
+    GitHub Actions (every 6h)
+```
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|---|---|
+| Language | Python 3.11 |
+| Scraping | BeautifulSoup4, Requests, lxml |
+| Job sources | LinkedIn (web), Remotive (API), RSS/Atom |
+| Notifications | Telegram Bot API |
+| Automation | GitHub Actions (cron: every 6 hours) |
+| State tracking | `seen_jobs.json` (committed, auto-updated by CI) |
+
+---
+
+## Sources Monitored
+
+- **LinkedIn** — 5 search queries: `bengali data annotation`, `bengali linguist`, `bengali NLP`, `bengali language expert`, `bengali AI trainer`
+- **Remotive** — API query for `bengali` across remote tech roles
+- **RSS/Atom feeds** — Configurable feed list for job boards
+
+---
+
+## Setup
+
+### 1. Prerequisites
+
+- Python 3.11+
+- A Telegram bot token (create via [@BotFather](https://t.me/BotFather))
+- Your Telegram chat ID (run `python get_chat_id.py` after bot setup)
+
+### 2. Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 TELEGRAM_CHAT_ID=your_chat_id_here
-SERPAPI_KEY=optional_serpapi_key_here
+SERPAPI_KEY=optional_serpapi_key
 ```
 
-### 4. Run the Tracker
-You can run the script manually to check for jobs:
+### 3. Install Dependencies
+
 ```bash
+python -m venv venv
 source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 4. Run Manually
+
+```bash
 python main.py
 ```
 
-### 5. Automate It
-To have this run automatically every hour, you can set up a crontab.
-1. Open terminal and run `crontab -e`
-2. Add the following line to run it every hour:
-`0 * * * * cd /Users/pari/Documents/ANTIGRAVITY/jobsearch/dataannotation && source venv/bin/activate && python main.py`
+### 5. Schedule Locally (cron)
+
+```cron
+0 * * * * cd /path/to/project && source venv/bin/activate && python main.py
+```
+
+### 6. Run on GitHub Actions
+
+Add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as repository secrets under **Settings > Secrets and variables > Actions**. The workflow in `.github/workflows/scraper.yml` handles the rest — it runs every 6 hours and auto-commits updates to `seen_jobs.json`.
+
+---
+
+## Project Structure
+
+```
+bengali-annotation-job-alert/
+├── main.py               # Orchestrator: loads state, runs scrapers, dispatches alerts
+├── scraper.py            # LinkedIn, Remotive, and RSS scrapers with dedup logic
+├── notifier.py           # Telegram Bot notifier
+├── get_chat_id.py        # Utility to retrieve your Telegram chat ID
+├── test_notification.py  # Smoke test for Telegram connection
+├── seen_jobs.json        # Persisted job IDs (auto-updated by GitHub Actions)
+├── requirements.txt
+└── .github/workflows/
+    └── scraper.yml       # Scheduled CI workflow
+```
+
+---
+
+## Author
+
+Built by **Rituparno Majumdar** as part of a Bengali NLP and AI annotation portfolio.
+- GitHub: [@Rituparno-Majumdar](https://github.com/Rituparno-Majumdar)
+- Domain focus: Bengali language data annotation, LLM training data, NLP tooling
+
+---
+
+## License
+
+MIT
