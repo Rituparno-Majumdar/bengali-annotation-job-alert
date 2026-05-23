@@ -15,6 +15,7 @@ _UMBRELLA_LANGUAGE = ["indic", "indian language", "south asian language", "multi
 _ROLE_TOKENS = [
     "annotat", "label", "linguist", "transcri",
     "ai train", "llm", "rlhf", "prompt", "language data", "translat",
+    "evaluat", "rater", "data collect", "speech", "voice data",
 ]
 
 
@@ -266,6 +267,8 @@ class LinkedInScraper(BaseScraper):
         "bengali linguist",
         "bengali ai training",
         "bangla annotation",
+        "bengali evaluator",
+        "bengali rater",
     ]
 
     def __init__(self):
@@ -326,6 +329,10 @@ _JOBSPY_QUERIES = [
     "bangla linguist AI training",
     "bengali NLP data labeling",
     "indic language annotation",
+    "bengali evaluator",
+    "bengali rater",
+    "native bengali speaker",
+    "bengali data collection",
 ]
 
 
