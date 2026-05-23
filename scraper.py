@@ -322,13 +322,12 @@ def get_all_scrapers():
         RemoteOKScraper(),
         ArbeitnowScraper(),
 
-        # Vendor Greenhouse boards — annotation/language niche
-        GreenhouseScraper("telusinternational", "Telus International AI"),
-        GreenhouseScraper("appen", "Appen"),
+        # Vendor Greenhouse boards — verified working slugs
+        GreenhouseScraper("remotasks", "Remotasks (Telus Digital AI)"),
         GreenhouseScraper("scaleai", "Scale AI"),
 
-        # Vendor Lever boards
-        LeverScraper("welocalize", "Welocalize"),
+        # Vendor Lever boards — verified working slugs
+        LeverScraper("appen", "Appen"),
         LeverScraper("innodata", "Innodata"),
 
         # LinkedIn (best-effort; may be blocked on CI runners)
