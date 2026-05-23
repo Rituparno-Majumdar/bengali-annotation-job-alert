@@ -62,7 +62,6 @@ Create a `.env` file in the project root:
 ```env
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 TELEGRAM_CHAT_ID=your_chat_id_here
-SERPAPI_KEY=optional_serpapi_key
 ```
 
 ### 3. Install Dependencies

@@ -1,6 +1,6 @@
-import os
 import requests
 from bs4 import BeautifulSoup
+from jobspy import scrape_jobs
 import logging
 import time
 import random
@@ -313,68 +313,53 @@ class LinkedInScraper(BaseScraper):
         return jobs
 
 
-_SERPAPI_QUERIES = [
-    "bengali annotation jobs",
+_JOBSPY_QUERIES = [
+    "bengali annotation",
     "bangla linguist AI training",
     "bengali NLP data labeling",
-    "indic language annotation remote",
+    "indic language annotation",
 ]
 
 
-class SerpApiScraper(BaseScraper):
-    """Searches Google Jobs via SerpAPI — covers all sources including companies with no ATS API."""
-
-    def __init__(self):
-        self.api_key = os.environ.get("SERPAPI_KEY")
+class JobSpyScraper(BaseScraper):
+    """Free scraper using python-jobspy — searches Indeed and Google Jobs with no API key or quota."""
 
     def fetch_jobs(self):
-        if not self.api_key:
-            logger.warning("SerpAPI: SERPAPI_KEY not set, skipping.")
-            return []
-
         jobs = []
         seen_ids = set()
 
-        for query in _SERPAPI_QUERIES:
+        for term in _JOBSPY_QUERIES:
             try:
-                resp = self._get(
-                    "https://serpapi.com/search.json",
-                    params={
-                        "engine": "google_jobs",
-                        "q": query,
-                        "hl": "en",
-                        "gl": "us",
-                        "chips": "date_posted:week",
-                        "api_key": self.api_key,
-                    },
+                df = scrape_jobs(
+                    site_name=["indeed", "google"],
+                    search_term=term,
+                    location="Remote",
+                    results_wanted=15,
+                    hours_old=168,          # last 7 days
+                    country_indeed="worldwide",
                 )
-                for item in resp.json().get("jobs_results", []):
-                    title = item.get("title", "")
-                    desc = item.get("description", "") or ""
+                for _, row in df.iterrows():
+                    title = str(row.get("title") or "")
+                    desc = str(row.get("description") or "")
                     if not self.matches_keywords(title, desc):
                         continue
-
-                    job_id = f"serpapi:{item.get('job_id', '')}"
+                    url = str(row.get("job_url") or "")
+                    job_id = f"jobspy:{url}"
                     if job_id in seen_ids:
                         continue
                     seen_ids.add(job_id)
-
-                    # Best available apply URL from related_links
-                    related = item.get("related_links", [])
-                    url = related[0].get("link", "") if related else ""
-
                     jobs.append({
                         "id": job_id,
                         "title": title,
-                        "company": item.get("company_name", "Unknown"),
+                        "company": str(row.get("company") or "Unknown"),
                         "url": url,
-                        "source": f"Google Jobs ({item.get('via', 'web')})",
+                        "source": f"JobSpy/{row.get('site', 'web')}",
                         "description": desc[:400],
                     })
             except Exception as e:
-                logger.error(f"SerpAPI error for query '{query}': {e}")
+                logger.error(f"JobSpy error for '{term}': {e}")
 
-        logger.info(f"SerpAPI: {len(jobs)} matching jobs")
+        logger.info(f"JobSpy: {len(jobs)} matching jobs")
         return jobs
 
 
@@ -388,8 +373,8 @@ def get_all_scrapers():
         RemoteOKScraper(),
         ArbeitnowScraper(),
 
-        # Google Jobs aggregator — covers Outlier, Alignerr, Sigma AI, YPAI and all others
-        SerpApiScraper(),
+        # Indeed + Google Jobs — covers Outlier, Alignerr, Sigma AI, YPAI and all others
+        JobSpyScraper(),
 
         # Vendor Greenhouse boards — verified working slugs
         GreenhouseScraper("remotasks", "Remotasks (Telus Digital AI)"),
